@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 import "./App.css";
-
+import "./ServiceDetails.css";
 const categoryIcons = {
   "home-repairs": Wrench,
   cleaning: Sparkles,

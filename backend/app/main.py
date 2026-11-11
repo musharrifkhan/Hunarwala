@@ -1,8 +1,10 @@
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.auth import router as auth_router
 from app.api.services import router as services_router
+from app.api.bookings import router as bookings_router
+from app.api.providers import router as providers_router
 
 app = FastAPI(
     title="Hunarwala API",
@@ -21,8 +23,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register services API
 app.include_router(services_router)
+app.include_router(bookings_router)
+app.include_router(auth_router)
+app.include_router(providers_router)
 
 
 @app.get("/")

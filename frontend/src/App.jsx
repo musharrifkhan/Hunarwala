@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from "react";
+import { signupUser, loginUser } from "./api";
 import { getServices, getCategories, getServiceBySlug } from "./api";
 import {
   Search, MapPin, ArrowRight, Wrench, Sparkles,
@@ -8,9 +8,12 @@ import {
   Laptop, RefreshCw, Star, Users, Clock, CheckCircle2,
   Zap, ArrowLeft, LoaderCircle
 } from "lucide-react";
-
+import MyBookings from "./MyBookings";
 import "./App.css";
 import "./ServiceDetails.css";
+import BookingModal from "./BookingModal";
+import "./BookingModal.css";
+import AuthModal from "./AuthModal";
 const categoryIcons = {
   "home-repairs": Wrench,
   cleaning: Sparkles,
@@ -35,12 +38,18 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  const [showBooking, setShowBooking] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+  const [showMyBookings, setShowMyBookings] = useState(false);
   const [serviceDetails, setServiceDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState("");
-
+  const [showAuth, setShowAuth] = useState(false);
+const [authMode, setAuthMode] = useState("login");
+const [authUser, setAuthUser] = useState(() => {
+  const saved = localStorage.getItem("hunarwala-user");
+  return saved ? JSON.parse(saved) : null;
+});
   const [dark, setDark] = useState(() => {
     return localStorage.getItem("hunarwala-theme") === "dark";
   });
@@ -145,51 +154,111 @@ function App() {
           <span>hunarwala<span className="dot">.</span></span>
         </a>
 
-        <div className="nav-links">
-          <a
-            href="#services"
-            onClick={(e) => {
-              if (selectedService) {
-                e.preventDefault();
-                closeService();
-              }
-            }}
-          >
-            Explore
-          </a>
-          {!selectedService && <a href="#how">How it works</a>}
-          {!selectedService && <a href="#professionals">For professionals</a>}
-        </div>
+        
+<div className="nav-links">
+  <a
+    href="#services"
+    onClick={(e) => {
+      if (selectedService || showMyBookings) {
+        e.preventDefault();
+        closeService();
+        setShowMyBookings(false);
+      }
+    }}
+  >
+    Explore
+  </a>
 
-        <div className="nav-actions">
-          <button
-            className="theme-toggle"
-            onClick={() => setDark((prev) => !prev)}
-            aria-label="Toggle theme"
-            title="Toggle theme"
-          >
-            {dark ? <Sun size={19} /> : <Moon size={19} />}
-          </button>
+  {!selectedService && !showMyBookings && (
+    <>
+      <a href="#how">How it works</a>
+      <a href="#professionals">For professionals</a>
+    </>
+  )}
 
-          <button className="login">Log in</button>
+  {!selectedService && (
+    <button
+      className="nav-bookings-link"
+      onClick={() => {
+        closeService();
+        setShowMyBookings(true);
+      }}
+    >
+      My Bookings
+    </button>
+  )}
+</div>
 
-          {!selectedService && (
-            <button
-              className="join"
-              onClick={() =>
-                document.getElementById("professionals")?.scrollIntoView({
-                  behavior: "smooth",
-                })
-              }
-            >
-              Become a provider <ArrowRight size={16} />
-            </button>
-          )}
-        </div>
+
+       
+<div className="nav-actions">
+  <button
+    className="theme-toggle"
+    onClick={() => setDark((prev) => !prev)}
+    aria-label="Toggle theme"
+    title="Toggle theme"
+  >
+    {dark ? <Sun size={19} /> : <Moon size={19} />}
+  </button>
+{authUser ? (
+  <div className="auth-user-actions">
+    <span className="auth-user-name">
+      Hi, {authUser.full_name.split(" ")[0]}
+    </span>
+    <button
+      className="login"
+      onClick={() => {
+        localStorage.removeItem("hunarwala-user");
+        localStorage.removeItem("hunarwala-token");
+        setAuthUser(null);
+      }}
+    >
+      Log out
+    </button>
+  </div>
+) : (
+  <button className="login" onClick={() => setShowAuth(true)}>
+    Log in
+  </button>
+)}
+
+  {!selectedService && (
+    <>
+      <button
+        className="nav-bookings-link"
+        onClick={() => {
+          closeService();
+          setShowMyBookings(true);
+        }}
+      >
+        My Bookings
+      </button>
+
+      {!showMyBookings && (
+        <button
+          className="join"
+          onClick={() =>
+            document.getElementById("professionals")?.scrollIntoView({
+              behavior: "smooth",
+            })
+          }
+        >
+          Become a provider <ArrowRight size={16} />
+        </button>
+      )}
+    </>
+  )}
+</div>
+
       </nav>
 
       {/* SERVICE DETAILS */}
-      {selectedService ? (
+      {showMyBookings ? (
+  <MyBookings
+  onBack={() => setShowMyBookings(false)}
+  user={authUser}
+/>
+) : selectedService ? (
         <main className="service-details-page">
           <div className="service-details-container">
             <button className="details-back" onClick={closeService}>
@@ -294,13 +363,11 @@ function App() {
                       </p>
 
                       <button
-                        className="details-book-button"
-                        onClick={() =>
-                          alert("Booking form is coming in the next step!")
-                        }
-                      >
-                        Book Now <ArrowRight size={18} />
-                      </button>
+  className="details-book-button"
+  onClick={() => setShowBooking(true)}
+>
+  Book Now <ArrowRight size={18} />
+</button>
 
                       <div className="details-trust">
                         <ShieldCheck size={18} />
@@ -319,6 +386,13 @@ function App() {
                     </div>
                   </aside>
                 </div>
+                {showBooking && (
+  <BookingModal
+    service={currentService}
+    onClose={() => setShowBooking(false)}
+    user={authUser}
+  />
+)}
               </>
             )}
           </div>
@@ -688,6 +762,15 @@ function App() {
             </div>
           </footer>
         </>
+      )}
+     {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onLogin={(user) => {
+            setAuthUser(user);
+            setShowAuth(false);
+          }}
+        />
       )}
     </div>
   );
